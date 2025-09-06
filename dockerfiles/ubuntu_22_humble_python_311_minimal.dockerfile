@@ -9,6 +9,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /workspace
 
+# First install ca-certificates with original sources
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates
+
+# Change apt mirrors to Tsinghua for faster downloads  
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|https://mirrors.tuna.tsinghua.edu.cn/ubuntu/|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com/ubuntu/|https://mirrors.tuna.tsinghua.edu.cn/ubuntu/|g' /etc/apt/sources.list
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
@@ -23,10 +31,8 @@ RUN apt-get update && \
 # Upgrade installed packages
 RUN apt update && apt upgrade -y && apt clean
 
-# Install Python3.11
+# Install Python3.11 from official Ubuntu repositories (no PPA needed for faster installation in China)
 RUN apt update && \
-    apt install --no-install-recommends -y build-essential software-properties-common && \
-    add-apt-repository -y ppa:deadsnakes/ppa && \
     apt install --no-install-recommends -y python3.11 python3.11-dev python3.11-distutils python3.11-venv
 
 # Setting up locale stuff
@@ -45,7 +51,7 @@ RUN curl -s https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     rm get-pip.py
 
 RUN wget https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc && apt-key add ros.asc
-RUN sh -c 'echo "deb [arch=$(dpkg --print-architecture)] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2-latest.list'
+RUN sh -c 'echo "deb [arch=$(dpkg --print-architecture)] https://mirrors.tuna.tsinghua.edu.cn/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2-latest.list'
 
 # Additional dependencies needed for rosidl_generator_c
 RUN apt update && apt install -y \
@@ -115,6 +121,10 @@ RUN apt update && apt install -y \
     libpng-dev \
     libjpeg-dev \
     python3-pyqt5.qtwebengine
+
+# Configure Aliyun mirror for pip early
+RUN pip3 config set global.index-url http://mirrors.aliyun.com/pypi/simple && \
+    pip3 config set install.trusted-host mirrors.aliyun.com
 
 RUN pip3 install setuptools==70.0.0
 
